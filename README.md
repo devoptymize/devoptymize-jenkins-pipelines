@@ -17,8 +17,6 @@
   - The first stage is named "Clean workspace". This stage cleans up the workspace, sets a display name for the build, and checks the length of the AWS account ID parameter to ensure it is a valid 12-digit number. If the length is not valid, the build is aborted. Then, it fetches the code from GitLab repository by specifying the branch and credentials for GitLab.
   - The second stage is named "Storing the AWS credentials in AWS Secret manager". This stage wraps the access key ID and secret access key fields to hide them during the execution of the pipeline. The withAWS block specifies the AWS credentials and region to use when interacting with AWS Secret Manager. It then creates the AWS secret by calling the "aws secretsmanager create-secret" command with the AWS access key ID and secret access key. If the AWS Account ID is invalid, it will be aborted.
 
-- The pipeline has a commented section for triggering a downstream pipeline that creates an S3 bucket and DynamoDB table. It would have been triggered if the AWS credentials were successfully created.
-
 - Overall, this script automates the creation of AWS credentials for a specific project and environment using AWS Secret Manager in Jenkins pipeline.
 
 ### Contributing
