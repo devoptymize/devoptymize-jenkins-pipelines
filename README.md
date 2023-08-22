@@ -138,7 +138,7 @@ This sample project demonstrates the basic steps to use AWS CodeBuild to build a
 
 
 
-### [Contributing]()
-We welcome contributions from the community to enhance the Jenkins pipeline. If you would like to contribute, please follow our guidelines outlined in the CONTRIBUTING.md file. You can submit feature requests, or pull requests to help us improve the template.
+### Contributing
+We welcome contributions from the community to enhance the Jenkins pipeline. If you would like to contribute, please follow our guidelines outlined in the [CONTRIBUTING.md](./CONTRIBUTING.md) file. You can submit feature requests, or pull requests to help us improve the template.
 
 ### License
