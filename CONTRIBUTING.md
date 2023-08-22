@@ -1,8 +1,9 @@
-## Contributing Guidelines
+# Contributing Guidelines
 
 Welcome to the repository! We appreciate your interest in contributing to this project. To ensure a smooth collaboration and maintain a high-quality scripts, please follow these guidelines when contributing.
 
-##### Table of Contents
+## Table of Contents
+
 - Getting Started
 - How to Contribute
 - Script Style
@@ -10,7 +11,7 @@ Welcome to the repository! We appreciate your interest in contributing to this p
 - Issue Reporting
 - License
 
-##### Getting Started
+### Getting Started
 
 Before contributing, please make sure you have the following set up:
 
@@ -18,7 +19,7 @@ Before contributing, please make sure you have the following set up:
 - Install the necessary dependencies and tools as mentioned in the project's README.
 - Familiarize yourself with the project structure and guidelines.
 
-##### How to Contribute
+### How to Contribute
 
 To contribute to this project, please follow these steps:
 
@@ -31,11 +32,11 @@ To contribute to this project, please follow these steps:
 - Be responsive to any feedback or suggestions provided during the PR review process.
 - Once your changes are approved, they will be merged into the main repository.
 
-##### Code Style
+### Code Style
 
 Please follow the established Script and conventions used in this project. Consistency in code formatting and naming conventions helps maintain readability and ease of maintenance. Refer to the project's documentation or existing script for guidance on the preferred script style.
 
-##### Pull Request Process
+### Pull Request Process
 
 When submitting a pull request, please adhere to the following guidelines:
 
@@ -47,11 +48,12 @@ When submitting a pull request, please adhere to the following guidelines:
 - Be open to feedback and actively participate in the discussion around your pull request.
 - Once your pull request is approved, it will be merged into the master branch by the repository maintainers.
 
-##### Issue Reporting
+### Issue Reporting
 
 If you encounter any issues while using or contributing to this project, please report them through the issue tracker. When creating a new issue, provide a clear and descriptive title along with a detailed description of the problem. Include steps to reproduce the issue, relevant logs or error messages, and any additional context that may be helpful in resolving the problem.
 
-##### License
+### License
+
 By contributing to this repository, you agree that your contributions will be licensed under the same license as the repository.
 
 Thank you for your contributions and support! Together, we can make this project even better.
