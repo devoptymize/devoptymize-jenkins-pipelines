@@ -1,104 +1,120 @@
-// The pipeline consistes of creating  aws creds
+properties([
+    parameters([
+        [$class: 'ChoiceParameter',  // Defines a choice parameter for the pipeline
+            choiceType: 'PT_SINGLE_SELECT',  // The type of choice parameter to create
+            description: 'Choose anyone of the below credential to provision the resources on the AWS account',  // A description of the parameter
+            filterLength: 1,  // The minimum number of characters required for the filter
+            filterable: false,  // Whether the parameter is filterable
+            name: 'CREDENTIAL',  // The name of the parameter
+            script: [  // A script to run to populate the choices for the parameter
+                $class: 'GroovyScript',  // The type of script to run
+                fallbackScript: [  // A fallback script to use if the main script fails
+                    classpath: [],  // The classpath to use for the fallback script
+                    sandbox: false,  // Whether to run the fallback script in a sandbox
+                    script: 
+                        "return['Create']"  // The fallback script itself, which just returns the 'Create' string
+                ], 
+                script: [  // The main script to run
+                    classpath: [],  // The classpath to use for the script
+                    sandbox: false,  // Whether to run the script in a sandbox
+                    script: 
+                        ''' import jenkins.model.*
+                            import org.apache.http.client.methods.*
+                            import org.apache.http.impl.client.*
+                            import groovy.json.JsonSlurper;
+                            import jenkins.*
+                            import hudson.model.*
+                            def user = User.current().getId()
+                            String result = user.takeWhile { it != '_' }
+                            def jenkinsCredentials = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                                    com.cloudbees.plugins.credentials.Credentials.class,
+                                    Jenkins.instance,
+                                    null,
+                                    null
+                            );
+                            
+                            def lst = []
+                            for (creds in jenkinsCredentials) {
+                                if((creds.id).contains(result)){
+                                    lst.add(creds.id)
+                                }
+                            }
+                            return lst                            
+                        '''  // The main script itself, which looks up the credentials available to the current user and returns them
+                ]
+            ]
+        ],
+        string(
+            defaultValue: '',  // The default value for the parameter
+            name: 'ENV_NAME',  // The name of the parameter
+            trim: false,  // Whether to trim whitespace from the parameter value
+            description: 'The Environment name in which the S3 for statefile and DynamoDB is created.'  // A description of the parameter
+        )
+    ])
+])
+
 pipeline{
     agent any
-
-    parameters{
-        string(
-            defaultValue: '', 
-            name: 'PROJECT_NAME', 
-            trim: false,
-            description: 'Enter the project name, which will be prefix for the AWS cred.'
-        )
-        string(
-            defaultValue: '', 
-            name: 'ACCOUNT_ID', 
-            trim: false,
-            description: 'The project AWS Account ID for which the credentials are created.'
-        )
-        string(
-            defaultValue: '', 
-            name: 'ENV_NAME', 
-            trim: false,
-            description: 'The Environment name for which the credentials are created.'
-        )
-        password( 
-            name: 'AWS_ACCESS_KEY_ID', 
-            description: 'AWS_ACCESS_KEY_ID'
-        )
-        password(
-            name: 'AWS_SECRET_ACCESS_KEY', 
-            description: 'AWS_SECRET_ACCESS_KEY'
-        )
+    environment {
+        //Extract the project name from the parameter passed in and store it in the PROJECT_NAME variable
+        PROJECT_NAME = sh (returnStdout: true, script: "echo ${params.CREDENTIAL} | cut -d'_' -f 1").trim()
+        //Extract the AWS account ID from the parameter passed in and store it in the ACCOUNT_ID variable
+        ACCOUNT_ID = sh (returnStdout: true, script: "echo ${params.CREDENTIAL} | cut -d'_' -f 2").trim()
     }
 
     stages{
+        //The first stage is to clean the workspace
         stage('1. Clean workspace'){
             steps{
                 script{
-                    // If the PROJECT_NAME parameter is empty, set the display name and result and abort the build
-                    if (params.PROJECT_NAME == '') { 
+                    //If the environment name is null, then abort the build and throw an error
+                    if (params.ENV_NAME == '') { 
                         currentBuild.displayName = "Loading parameters"
                         currentBuild.result = 'ABORTED'
                         error('The parameter value is null')
                     }
-                    // Get the Jenkins item based on the PROJECT_NAME and set the item description
-                    def item = Jenkins.instance.getItemByFullName("${params.PROJECT_NAME}_Config_Multibranch/1.Create_AWS_Secrets")
-                    item.setDescription(" The pipeline is to create the AWS credentials in AWS Secret manager for the project ${PROJECT_NAME}")
-                    // Set the display name of the current build
-                    currentBuild.displayName = "Creating AWS creds for project ${PROJECT_NAME} with AWS account ID ${ACCOUNT_ID} for the environment ${ENV_NAME}"
+                    //Set the display name of the current build to show what is happening in this stage
+                    currentBuild.displayName = "Creating S3 & Dynamodb for project ${env.PROJECT_NAME} with AWS account ID ${env.ACCOUNT_ID} for the environment ${ENV_NAME}"
                 }
-                // Remove all files from the workspace directory
+                //Remove all files from the workspace
                 sh "rm -rf ${env.WORKSPACE}/*"
-                // Change to the "import" directory and clone the git repository
-                dir ("import") {
-                    git branch: '1.Create_AWS_Secrets', credentialsId: 'devoptymize', url: 'https://gitlab.cloudifyops.com/devoptymize_infrastructure/devoptymize_jenkins_config.git'
-                }
             }
+        }
 
-        }
-            
-        stage('2. Storing the AWS credentials in AWS Secret manager'){
-            steps {
-                script{
-                    // Mask the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY parameters
-                    wrap([$class: 'MaskPasswordsBuildWrapper', varPasswordPairs: [ 
-                        [password: "${AWS_ACCESS_KEY_ID}"], 
-                        [password: "${AWS_SECRET_ACCESS_KEY}"] ] ]) {
-                            // Authenticate with AWS using the provided credentials
-                            withAWS( credentials : "${params.PROJECT_NAME.toLowerCase()}_aws_cred" ){
-                                // Change the working directory to 'import'
-                                dir ("import") {
-                                    // Declare a variable for automatic cancellation of the pipeline
-                                    def autoCancelled = false
-                                    // Check if the AWS account ID has the correct length (12)
-                                    n = params.ACCOUNT_ID.length()
-                                    if (n == 12) { 
-                                        // Print the length of the AWS account ID
-                                        println(params.ACCOUNT_ID.length())
-                                        // Execute the shell command to create a secret in AWS Secret Manage
-                                        sh """
-                                            aws secretsmanager create-secret \
-                                                --name "${params.PROJECT_NAME.toLowerCase()}_${params.ACCOUNT_ID}_aws_cred" \
-                                                --region  us-east-1 \
-                                                --description "AWS cred of project ${params.PROJECT_NAME.toLowerCase()} with account id ${params.ACCOUNT_ID}" \
-                                                --tags 'Key=jenkins:credentials:type,Value=string' \
-                                                --secret-string "{\\"accessKeyId\\":\\"${params.AWS_ACCESS_KEY_ID}\\",\\"secretAccessKey\\":\\"${params.AWS_SECRET_ACCESS_KEY}\\"}"
-                                       
-                                            sleep 30
-                                        """ 
-                                    } else { 
-                                        // Print an error message and set autoCancelled to true if the AWS account ID is incorrect
-                                        println("The AWS Account ID is incorrect")
-                                        autoCancelled = true
-                                        error('Please check your AWS Account ID')
-                                    }
-                                            
-                                }
-                            }
-                    }
+        stage('2. Creating S3 and Dynamodb for Terraform statefiles'){
+            steps{
+                script {
+                    //Retrieve the AWS credentials from Jenkins credentials store using the project name and AWS account ID
+                    withCredentials([string(credentialsId: "${env.PROJECT_NAME.toLowerCase()}_${env.ACCOUNT_ID}_aws_cred", variable: 'secret')]) {
+                        //Extract the access key and secret access key from the credentials and set them as environment variables
+                        def creds = readJSON text: secret
+                        env.AWS_ACCESS_KEY_ID = creds['accessKeyId']
+                        env.AWS_SECRET_ACCESS_KEY = creds['secretAccessKey']
+
+                        //Execute AWS CLI commands to create S3 bucket and Dynamodb table
+                        sh """
+                            aws s3api create-bucket \
+                            --bucket  "${env.PROJECT_NAME.toLowerCase()}-${env.ACCOUNT_ID}-${params.ENV_NAME.toLowerCase()}-terraform-statefile-bucket" \
+                            --region  us-east-1 \
+                            --acl private
+
+                            aws s3api put-public-access-block \
+                                --bucket "${env.PROJECT_NAME.toLowerCase()}-${env.ACCOUNT_ID}-${params.ENV_NAME.toLowerCase()}-terraform-statefile-bucket" \
+                                --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true" 
+
+                            aws dynamodb create-table \
+                                --table-name "${env.PROJECT_NAME.toLowerCase()}-${env.ACCOUNT_ID}-${params.ENV_NAME.toLowerCase()}-terraform-lock-db" \
+                                --attribute-definitions AttributeName=LockID,AttributeType=S \
+                                --key-schema AttributeName=LockID,KeyType=HASH \
+                                --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+                                --table-class STANDARD \
+                                --region us-east-1 
+                            """
+                    }   
                 }
             }
         }
-   
     }
 }
+
+    
