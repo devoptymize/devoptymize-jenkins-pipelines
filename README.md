@@ -1,56 +1,62 @@
-# DevOptymize AWS RDS STACK
+# Microservices architecture with Network, EKS cluster, RDS cluster, S3, CloudFront and Route53
 
-### Overview
+![Image](./Devoptymize-Blueprints-MicroService-architecture_with_EKS+S3_CDN_+PSQL.drawio__1_.png )
 
-This is a [Jenkins pipeline script](./Jenkinsfile) that helps us to create aws rds stack such as VPC, Public Subnets, Private Subnets, NAT gateways, Internet gateways, Linux bastion host, RDS instances with multi az replicas, Cloudwatch, Amazon SNS and Amazon KMS in an AWS account.
+### PREREQUISITE
 
-![Image](./AWS-RDS-STACK.png)
+- The User must have the valid ACM certificate in their AWS account.
 
 ### RESOURCES CREATED
 
-- VPC
-- Subnets - Public & Private (No of Subnets is determined by the no of cidrs provided by the user)
-- Route tables  - Public, Private & Database
-- Internet gateway
-- NAT Gateway (one per every az)
-- Linux bastion host (one per every az)
-- RDS Instances with replicas (one per every az)
-- Cloudwatch
-- Amazon SNS
-- Amazon KMS
+- VPC Resources
+  - VPC with specified CIDR range and availability zones.
+  - Private and public subnets within the VPC.
+  - NAT gateways for private subnets.
+  - Security groups for the EKS cluster and RDS.
 
-### The Jenkins pipeline sets up the following
+- EKS Cluster Resources
+  - Amazon EKS cluster with managed node group.
+  - IAM roles and policies associated with EKS and node group.
+  - Security groups for the EKS cluster and its nodes.
 
-- A highly available architecture that spans two Availability Zones.
-- A virtual private cloud (VPC) configured with public and private subnets, according to AWS best practices, to provide you with your own virtual network on AWS.
+- RDS Cluster Resources
+  - Amazon RDS postgres cluster.
+  - Security group for RDS cluster.
 
-In the public subnets:
+- Amazon S3 Bucket
+  - Amazon S3 bucket for code hosting with versioning enabled.
+  - S3 bucket policy allowing access from CloudFront.
 
-- Managed NAT gateways to allow outbound internet access for resources in the private subnets.
-- An Linux bastion host in an Auto Scaling group to allow inbound SSH (Secure Shell) access to Amazon Elastic Compute Cloud (Amazon EC2) instances in public and private subnets.
+- Amazon CloudFront Distribution
+  - CloudFront distribution for content delivery.
+  - Origin configurations pointing to the S3 bucket.
 
-In the private subnets:
+- Amazon Route 53
+  - DNS records associated with the CloudFront distribution.
 
-- An Amazon RDS instances that includes a write replica in one Availability Zone and a read replica in the other.
-- CloudWatch metrics for monitoring the database instance and CloudWatch logs for storing database logs.
-- An Amazon Simple Notification Service (Amazon SNS) topic for sending CloudWatch alarm and Amazon RDS event notifications.
-- AWS Key Management Service (AWS KMS) for encrypting the data stored in the database instance.
+- Additional IAM and Policy Resources:
+  - IAM role for EKS managed node group.
+  - IAM role for CloudFront distribution.
 
-### The Jenkins pipeline includes the following steps
+### Overview
+
+- This is a Jenkins pipeline script that create Microservice architecture such as network, EKS cluster, RDS cluster, S3, CloudFront and Route53 in an AWS account.
+
+- The pipeline includes the following steps:
 
 - First, it takes user input in the form of credentials to provision the resources on an AWS account. The pipeline uses the ChoiceParameter to provide a list of credentials to choose from. The GroovyScript block defines the logic to fetch the credentials available in the Jenkins instance and returns a list of credentials associated with the user's login.
 
-- The pipeline then create an aws rds stack. It extracts the environment name from the input parameter and uses it to generate the names of the resources. The withCredentials block reads the access key and secret key from the AWS credentials associated with the account and uses them to run the CFT and TF commands that create the rds stack.
+- The pipeline then creates a Microservice architecture. It extracts the environment name from the input parameter and uses it to generate the names of the resources. The withCredentials block reads the access key and secret key from the AWS credentials associated with the account and uses them to run the CFT and TF commands that create the Microservice architecture.
 
 - The agent any directive specifies that the pipeline can run on any agent machine with a specific label or without a label. In this case, it is not restricted to any agent machine.
 
 - The environment block defines two environment variables that are derived from the user input. PROJECT_NAME is extracted from the credential name, and ACCOUNT_ID is extracted by splitting the credential name at the underscore (_) character.
 
-The pipeline has three stages:
+- The pipeline has three stages:
 
-- The first stage cleans the workspace by removing any existing files from it. If the environment name parameter is empty, the pipeline stops and displays an error message. Otherwise, it sets the display name for the current build to include the project name, AWS account ID, and environment name.
-- The second stage used for SCM Checkout which instructs jenkins to obtain pipeline from SCM
-- The third stage create the AWS-RDS-stack-architecture with Public Subnets, Private Subnets, Linux bastion host, RDS instances with multi az replicas, Cloudwatch, Amazon SNS and Amazon KMS in the defined region.  For CFT, The process will wait, it outputs a message indicating that the stack creation is still in progress and waits for 30 seconds before checking the status again, after the stack creation complete. it will commit the output file in ops_devoptimize repo. It uses the if and else block to set the environment variables required for CloudFormationTemplate and Terraform. It then runs the CFT and TF  commands to create the RDS-stack-architecture.
+  - The first stage cleans the workspace by removing any existing files from it. If the environment name parameter is empty, the pipeline stops and displays an error message. Otherwise, it sets the display name for the current build to include the project name, AWS account ID, and environment name.
+  - The second stage used for SCM Checkout which instructs jenkins to obtain pipeline from SCM
+  - The third stage create the Microservice architecture with resources Network, EKS cluster, RDS cluster, S3, CloudFront and Route53 in the defined region. For CFT, The process will wait, it outputs a message indicating that the stack creation is still in progress and waits for 30 seconds before checking the status again, after the stack creation complete. it will commit the output file in ops_devoptimize repo. It uses the if and else block to set the environment variables required for CloudFormationTemplate and Terraform. It then runs the CFT and TF commands to create the Microservice architecture.
 
 Overall, this script provides a way to automate the creation of resources required for Terraform state management,CloudFormation and resource locking in an AWS account.
 
@@ -58,44 +64,38 @@ Overall, this script provides a way to automate the creation of resources requir
 
 Once you have the jenkins set up is done create a Job with the resource specified jenkins file. Then select the **Build with Parameters** in which the following parameters have to be specified.
 
-| Parameters     |                                     Description                                                | Default Values TF  |         Default Values CFT |
-| :------------ |                                      :-----                                                     | :-------- |           :------------ |
-| `ACTION`       |This parameter allows the user to select either Create or modify or delete a resources in the AWS account. This parameter will have list of actions such as Create, Modify and Delete.                    | `Create`   |   `Create` |
-| `IAC_TOOL`     | This parameter allows the user to select one of the two IAC_TOOLS for creating the resource. The IAC-TOOLS which can be used are Cloudformation or Terraform  | `Terraform`  |      `CloudFormation`  |
-| `CREDENTIAL`       |This parameter allows the user to select the credential which has necessary permission to create a resource in the AWS account.                     | `ops_xxxxxxxxxx_aws_cred`   |    `ops_xxxxxxxxxx_aws_cred`  |
+| Parameters     |                                     Description                                                | Default Values  |
+| :------------ |                                      :-----                                                     | :-------- |
+| `ACTION`       |This parameter allows the user to select either Create or modify or delete a resources in the AWS account. This parameter will have list of actions such as Create, Modify and Delete.                    | `Create`   |
+| `IAC_TOOL`     | This parameter allows the user to select one of the two IAC_TOOLS for creating the resource. The IAC-TOOLS which can be used are Cloudformation or Terraform  | `Terraform`  |
+| `CREDENTIAL`       |This parameter allows the user to select the credential which has necessary permission to create a resource in the AWS account.                     | `project_xxxxxxxxxx_aws_cred`   |
 | `ENVIRONMENT`       |  The parameter allows the user to enter the Environment in which the required resource can be created. for example: dev and prod environment.                    | `  |
-| `REGION`       | This parameter allows the user to select the region in which the RDS Instances can be created. This parameter will have a list of all the regions upon which the user can select the desired region.                 | `us-east-1`   |    `us-east-1` |
+| `REGION`       | This parameter allows the user to select the region in which the RDS Instances can be created. This parameter will have a list of all the regions upon which the user can select the desired region.                 | `us-east-1`   |
 | `STACK_NAME`       |  This parameter allows the user to enter the desired name of the stack in the dialog box.        |  |
 | `VPC_CIDR_RANGE`       | This parameter that defines the IP address range for an Amazon Virtual Private Cloud (VPC). It determines the available IP addresses for the resources within the VPC.                 |   |
-| `PUBLIC_SUBNETS`       | This parameter that defines the list of public subnets within an Amazon Virtual Private Cloud (Amazon VPC). These subnets have their associated route tables configured to allow outbound internet access, making them suitable for hosting resources that require public accessibility, such as web servers or load balancers.      |   |
+| `PUBLIC_SUBNETS`       | This parameter that defines the list of public subnets within an Amazon Virtual Private Cloud (Amazon VPC). These subnets have their associated route tables configured to allow outbound internet access, making them suitable for hosting resources that require public accessibility.      |   |
 | `PRIVATE_SUBNETS`       | This parameter that refers to a subset of subnets within an Amazon VPC that are isolated from the public internet and primarily used for hosting private resources or services, ensuring additional security and control.              |   |
-| `AMI_ID`     |   This parameter likely specifies a specific AMI that you want to use as the base for your EC2 instance.  
-| `INSTANCE_TYPE` | This parameter specifies the type of Amazon EC2 instance that you want to launch.                                        | `r6a.2xlarge` |     `r6a.2xlarge`  |
-| `KEY_PAIR`  |  This parameter is used for specifying the key pair that will be associated with the EC2 instance. It consists of a public key and a private key. When you launch an EC2 instance, you can use a key pair to securely access the instance via SSH (Secure Shell) or other remote access methods              | `odoo` |    `odoo` |
-| `VOLUME_SIZE` | This parameter specifies the size of a storage volume, usually associated with an Amazon EC2 instance. Example 10 , 20 ,30
-| ` VOLUME_TYPE ` | This parameter indicates the type of storage volume that will be created or attached to an EC2 instance. Example gp2, gp3
-| ` ASG_DESIRED_CAPACITY ` | This parameter refers to the desired number of instances that you want to maintain within an Auto Scaling Group
-| ` ASG_MIN_SIZE ` | This parameter sets the minimum number of instances that the Auto Scaling Group is allowed to have.
-| ` ASG_MAX_SIZE ` | This parameter defines the maximum number of instances that the Auto Scaling Group can scale up to.
-| `RDS_IDENTIFIER` | The parameter allows the user to enter the identifier for the RDS primary instance to be created.
-|`ENGINE_TYPE` | The database engine type for the RDS instance, e.g., postgres, mysql, etc. |    |
-| `ENGINE_VERSION` | This parameter allows the user to select the version of the selected database engine, e.g., 13.4 |   |
-|`DB_INSTANCE_CLASS` | This parameter allows the user to select the instance class for the RDS instances within the cluster, e.g., db.t2.micro |   |
-| `DB_MASTER_USERNAME` | This parameter allows the user to enter the master username for the RDS instance.
-| `DB_MASTER_PASSWORD` | This parameter allows the user to enter The master password for the RDS instance.
-| `LOG_EXPORTS` | This parameter allows the user to determine that you need to export logs to cloudwatch. | `yes` |   `yes` |
-| `EMAIL_ADDRESS` | This parameter allows the user to determine that you need to enter the mail id for the SNS Notificatins.
+| `DATABASE_PRIVATE_SUBNETS`  |  This parameter that refers to a subset of subnets within an Amazon VPC that are isolated from the database internet and primarily used for hosting database resources or services, ensuring additional security and control. |   |
+| `ENGINE_TYPE`  |   This parameter states that only we can able to create the postgres type of engine for the DB cluster    |  `postgres`   |
+| `ENGINE_VERSION` |  This parameter allows the user to select the engine version of postgres and the Multi-AZ DB cluster deployment option is available for PostgreSQL version 13.4 R1 and above, Choose engine version above 13.4   | `11.6`   |
+| `DB_MASTER_USERNAME`  |  This parameter allows the user to enter their DB's username  |    |
+| `DB_MASTER_PASSWORD`  |  This parameter allows the user to enter the DB's password    |    |
+| `DB_INSTANCE_CLASS`   |  This parameter allows the user to select the instance class for their DB |  `db.m6g.16xlarge`  |
+| `RDS_STORAGE`         |  This parameter allows the user to enter the storage of their DB instance |                     |
+| `CLUSTER_VERSION`      |  This parameter allows the user to select the version of their EKS cluster |   `1.26`   |
+| `EKS_NODE_GROUP_INSTANCE_TYPE`  | This parameter will used to give the instance type for the EKS cluster and the user should give list of string format when they choose IAC as terraform, For example: ["m5.large"]. If the user chooses the IAC as CloudFormation then it should be in string format, For example: "m5.large"  |    |
+| `EKS_NODE_GROUP_MIN_SIZE`  | This parameter allows the user to give the min size of the EKS nodes.  If you choose the IAC as CloudFormation then this parameter will be hided and take the size of the node group as 3 automatically.  |   |
+| `EKS_NODE_GROUP_MAX_SIZE`  | This parameter allows the user to give the maximum size of the EKS nodes but the maximum value we can give is 3. If you choose the IAC as CloudFormation then this parameter will be hided and take the size of the node group as 3 automatically.  |   |
+| `EKS_NODE_GROUP_DESIRED_SIZE` | This parameter will allows the user to give the desired size of the EKS nodes and only the value upto 3 is allowed here. If you choose the IAC as CloudFormation then this parameter will be hided and take the size of the node group as 3 automatically. |     |
+| `EKS_NODE_GROUP_CAPACITY_TYPE`  | This parameter will allows the user to select the capacity type of the nodes  |   `ON_DEMAND`   |
+| `CDN_ALIASES`     | This parameter will allows the user to CDN aliases name for the CloudFront distributions. Example: ["test.ex001.in"], this should be given in list of string format.  |    |
+| `ACM_CERTIFICATE_ARN`   | This parameter allows the user to pass the ARN of their ACM certificate which they have in their desired region where they are going to create the infrastructure.      |           |
+| `HOSTED_ZONE_ID`   | This parameter allows the user to give the existing hosted zone ID for the Route53    |   |
+| `RECORD_NAME`   |   This parameter allows the user to mention the route53 record name which is going to be created  |   |
 
-### Features
+### LIMITATION -  
 
-- Creating AWS RDS-stack-architecture using IaC (Terraform/CloudFormation) templates with parameterized jenkins build.
-- Can be used to Create and Delete RDS-stack incase of Cloudformation and can Create, Modify and Delete RDS-stack-architecture incase of Terraform.
-- Can be used to define environment in which resource can be created.
-
-#### Limitations
-
-- The create and delete actions were functioning correctly in the Terraform script, except for the modify action.
-- The modify action should work as intended in the Terraform script, similar to how create and delete actions are functioning correctly.
+When you choose the `Modify` action type and proceed to change the username and password for an Amazon RDS (Relational Database Service) instance, the RDS instance is  deleted and recreated as a standard course of action.
 
 ### Contributing
 
