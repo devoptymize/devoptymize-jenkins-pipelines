@@ -553,12 +553,6 @@ properties([
 )
 ])
 
-    
-
-
-
-
-
 pipeline{ 
     agent any 
     options { // Specifies pipeline-specific options/behaviors
