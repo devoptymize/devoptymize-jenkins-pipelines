@@ -4,7 +4,7 @@
 
 - This is a Jenkins pipeline script that create AWS DevOps Pipeline for Backend application builds with stages like source stage , build stage ,  and SNS topic for email notification .
 
-![image](./Devoptymize-Blueprints-AWS-Devops-Nodejs-Backend.drawio.png)
+![image](./Devoptymize-aws-cicd-ms.png)
 
 ### RESOURCES CREATED
 
